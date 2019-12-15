@@ -1,0 +1,104 @@
+---
+title: "Practical Machine Learning"
+author: "Karthikeyan"
+date: "12/16/2019"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Synopsis:
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways
+
+
+
+
+## Load libraries and setup working directory
+```{r }
+
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(RColorBrewer)
+library(rattle)
+library(randomForest)
+
+#Loadind the data from URL
+
+trainingdata <- read.csv(url("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"),header=TRUE)
+dim(trainingdata)
+
+testdata<- read.csv(url("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"),header=TRUE)
+dim(testdata)
+
+
+str(trainingdata)
+
+#Cleaning the Data by removing the NA
+
+removena<- which(colSums(is.na(trainingdata) |trainingdata=="")>0.9*dim(trainingdata)[1])
+cleanedtrainingdata <- trainingdata[,-removena]
+cleanedtrainingdata <- cleanedtrainingdata[,-c(1:7)]
+dim(cleanedtrainingdata)
+
+removena<- which(colSums(is.na(testdata) |testdata=="")>0.9*dim(testdata)[1])
+cleanedtestdata <- testdata[,-removena]
+cleanedtestdata <- cleanedtestdata[,-1]
+dim(cleanedtestdata)
+str(cleanedtestdata)
+
+
+# Partition the train and test data
+set.seed(12345)
+untrain <- createDataPartition(cleanedtrainingdata$classe,p=0.75,list=FALSE)
+Train <- cleanedtrainingdata[untrain,]
+Test <- cleanedtrainingdata[-untrain,] 
+dim(Train)
+```
+
+
+#Classification Tree
+```{r }
+trControl <- trainControl(method="cv", number=5)
+model_CT <- train(classe~., data=Train, method="rpart", trControl=trControl)
+trControl <- trainControl(method="cv", number=5)
+model_CT <- train(classe~., data=Train, method="rpart", trControl=trControl)
+trainpre <- predict(model_CT,newdata=Test)
+confMatCT <- confusionMatrix(Test$classe,trainpre)
+confMatCT$table
+confMatCT$overall[1]
+```
+
+# Randon Forest
+```{r }
+modFit1 <- randomForest(classe ~., method = "class", data = Train)
+pred1 <- predict(modFit1, newdata = Test, type = "class")
+confMatrix <- confusionMatrix(pred1, Test$classe)
+confMatrix$table
+confMatrix$overall[1]
+```
+
+
+#Decision Tree
+```{r }
+modFitDec <- train(classe ~., method = "rpart", data = Train)
+fancyRpartPlot(modFitDec$finalModel)
+predes <- predict(modFitDec, newdata = Test)
+confMatrix2 <- confusionMatrix(predes, Test$classe)
+confMatrix2$table
+confMatrix2$overall[1]
+pre <- predict(modFit1, newdata = testdata, type = "class")
+pre
+```
+```{r model_CT, echo=FALSE}
+plot(model_CT)
+```
+
+
+## Conclusion:
+3 different model are tested. Random Forest is the best fit model among the three.
+
